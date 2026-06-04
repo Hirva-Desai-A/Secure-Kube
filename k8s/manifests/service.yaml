@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: securekube-api-svc
+  namespace: securekube-app
+spec:
+  selector:
+    app: securekube-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP

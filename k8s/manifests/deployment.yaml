@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: securekube-api
+  namespace: securekube-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: securekube-api
+  template:
+    metadata:
+      labels:
+        app: securekube-api
+    spec:
+      containers:
+        - name: securekube-api
+          image: localhost:5001/securekube-api:v1
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
