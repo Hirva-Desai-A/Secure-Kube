@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]
 
+# ADD THIS BLOCK TO GRANT PERMISSIONS
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   security-scan:
     name: Security Scanning
