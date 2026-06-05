@@ -1,0 +1,7 @@
+title = "SecureKube Gitleaks Configuration"
+
+[allowlist]
+  description = "Global allowlist"
+  paths = [
+    '''^\.gitleaks\.toml$''',
+  ]
