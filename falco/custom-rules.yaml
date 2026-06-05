@@ -1,0 +1,30 @@
+customRules:
+  securekube_rules.yaml: |-
+    - rule: Shell spawned in securekube container
+      desc: A shell was spawned inside a SecureKube application container
+      condition: >
+        spawned_process and
+        container and
+        container.image.repository contains "securekube" and
+        proc.name in (shell_binaries)
+      output: >
+        SECUREKUBE ALERT - Shell in container
+        (user=%user.name user_loginuid=%user.loginuid
+        proc=%proc.name parent=%proc.pname
+        container=%container.name image=%container.image.repository)
+      priority: CRITICAL
+      tags: [securekube, shell, container]
+
+    - rule: Sensitive file read in securekube namespace
+      desc: A sensitive file was read in a SecureKube container
+      condition: >
+        open_read and
+        container and
+        container.image.repository contains "securekube" and
+        fd.name in (/etc/shadow, /etc/passwd, /root/.ssh/id_rsa)
+      output: >
+        SECUREKUBE ALERT - Sensitive file read
+        (user=%user.name file=%fd.name
+        container=%container.name)
+      priority: WARNING
+      tags: [securekube, file, sensitive]

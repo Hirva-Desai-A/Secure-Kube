@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: remediation-sa
+  namespace: securekube-security
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pod-remediator
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pod-remediator-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pod-remediator
+subjects:
+  - kind: ServiceAccount
+    name: remediation-sa
+    namespace: securekube-security
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: remediation-engine
+  namespace: securekube-security
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: remediation-engine
+  template:
+    metadata:
+      labels:
+        app: remediation-engine
+    spec:
+      serviceAccountName: remediation-sa
+      containers:
+        - name: remediation-engine
+          image: localhost:5001/securekube-remediation:v1
+          ports:
+            - containerPort: 8081
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: remediation-svc
+  namespace: securekube-security
+spec:
+  selector:
+    app: remediation-engine
+  ports:
+    - port: 80
+      targetPort: 8081

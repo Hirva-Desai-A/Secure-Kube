@@ -1,0 +1,28 @@
+# 1. Deny all traffic by default
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: securekube-app
+spec:
+  {}
+---
+# 2. Allow payment-svc to call securekube-api only
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-payment-to-api
+  namespace: securekube-app
+spec:
+  selector:
+    matchLabels:
+      app: securekube-api
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/securekube-app/sa/default"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/transaction", "/health"]
