@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: securekube-db-pvc
+  namespace: securekube-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: securekube-db
+  namespace: securekube-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: securekube-db
+  template:
+    metadata:
+      labels:
+        app: securekube-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_USER
+              value: secureuser
+            - name: POSTGRES_PASSWORD
+              value: securepass123
+            - name: POSTGRES_DB
+              value: securedb
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: securekube-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: securekube-db-svc
+  namespace: securekube-app
+spec:
+  selector:
+    app: securekube-db
+  ports:
+    - port: 5432
+      targetPort: 5432

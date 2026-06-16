@@ -1,107 +1,66 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from kubernetes import client, config
 import logging
-import json
 import re
-from datetime import datetime
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("securekube-remediation")
 
 app = FastAPI(title="SecureKube Remediation Engine")
 
-# Load Kubernetes config
 try:
     config.load_incluster_config()
-    logger.info("Loaded in-cluster Kubernetes config")
 except:
     config.load_kube_config(context="kind-securekube")
-    logger.info("Loaded local Kubernetes config")
 
 v1 = client.CoreV1Api()
 
-incident_log = []
-
-def extract_container_name(alert_output: str) -> str:
-    match = re.search(r'container=([^\s)]+)', alert_output)
-    return match.group(1) if match else None
-
-def find_pod_by_container(container_name: str, namespace: str = "securekube-app") -> str:
-    pods = v1.list_namespaced_pod(namespace=namespace)
-    for pod in pods.items:
-        for container in pod.spec.containers:
-            if container.name == container_name or container_name in pod.metadata.name:
-                return pod.metadata.name
+def find_pod_by_container_id(container_id: str, namespace: str = "securekube-app"):
+    try:
+        pods = v1.list_namespaced_pod(namespace=namespace)
+        for pod in pods.items:
+            if pod.status.container_statuses:
+                for status in pod.status.container_statuses:
+                    if status.container_id and container_id in status.container_id:
+                        return pod.metadata.name
+    except Exception as e:
+        logger.error(f"Error finding pod: {e}")
     return None
 
 def delete_pod(pod_name: str, namespace: str = "securekube-app"):
     try:
         v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
-        logger.info(f"REMEDIATION: Deleted compromised pod {pod_name} in {namespace}")
+        logger.info(f"REMEDIATION: Deleted compromised pod {pod_name}")
         return True
-    except client.exceptions.ApiException as e:
-        logger.error(f"Failed to delete pod {pod_name}: {e}")
+    except Exception as e:
+        logger.error(f"Failed to delete {pod_name}: {e}")
         return False
-
-@app.get("/")
-def root():
-    return {"service": "securekube-remediation", "status": "active", "incidents": len(incident_log)}
-
-@app.get("/incidents")
-def get_incidents():
-    return {"total": len(incident_log), "incidents": incident_log}
 
 @app.post("/webhook/falco")
 async def handle_falco_alert(request: Request):
     try:
         body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON")
-
-    priority = body.get("priority", "").upper()
-    rule = body.get("rule", "")
-    output = body.get("output", "")
-    
-    logger.warning(f"ALERT RECEIVED | Priority: {priority} | Rule: {rule}")
-    logger.warning(f"Output: {output}")
-
-    incident = {
-        "timestamp": datetime.utcnow().isoformat(),
-        "priority": priority,
-        "rule": rule,
-        "output": output,
-        "action_taken": "none"
-    }
-
-    # Auto-remediate high/critical alerts (including our Notice level shell test)
-    if priority in ["CRITICAL", "NOTICE", "WARNING"]:
-        container_name = extract_container_name(output)
+        output = body.get("output", "")
         
-        # Fallback: if regex fails, try to extract k8s_pod_name directly
-        pod_name = None
-        if "k8s_pod_name=" in output:
-            match = re.search(r'k8s_pod_name=([^\s]+)', output)
-            if match:
-                pod_name = match.group(1)
+        # Log the raw alert so we can see what Falco is sending
+        logger.info(f"Received Alert: {output}")
 
-        if not pod_name and container_name:
-            pod_name = find_pod_by_container(container_name)
+        pod_match = re.search(r'k8s\.pod\.name=([^\s,]+)', output)
+        pod_name = pod_match.group(1) if pod_match else None
+        
+        if not pod_name or pod_name == "<NA>":
+            container_id_match = re.search(r'container_id=([^\s,]+)', output)
+            if container_id_match:
+                pod_name = find_pod_by_container_id(container_id_match.group(1))
 
-        if pod_name:
-            success = delete_pod(pod_name)
-            incident["action_taken"] = f"pod_deleted:{pod_name}" if success else "deletion_failed"
-            logger.critical(f"AUTO-REMEDIATION: Pod {pod_name} deleted due to rule '{rule}'")
-        else:
-            incident["action_taken"] = "pod_not_found"
-            logger.warning("Could not find pod to terminate.")
-    else:
-        incident["action_taken"] = "logged_only"
-
-    incident_log.append(incident)
-    return {"status": "processed", "incident": incident}
+        if pod_name and pod_name != "<NA>":
+            delete_pod(pod_name)
+            return {"status": "remediated"}
+        
+        return {"status": "ignored"}
+    except Exception as e:
+        logger.error(f"Error processing webhook: {e}")
+        return {"status": "error"}
 
 @app.get("/health")
 def health():
