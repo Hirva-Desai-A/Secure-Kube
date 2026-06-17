@@ -15,7 +15,8 @@ spec:
     spec:
       containers:
         - name: payment-svc
-          image: localhost:5001/payment-svc:v1
+          image: localhost:5000/payment-svc:v1
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           resources:

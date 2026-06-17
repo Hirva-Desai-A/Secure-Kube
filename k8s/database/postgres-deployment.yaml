@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: securekube-db
+  namespace: securekube-app
+  labels:
+    app: securekube-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: securekube-db
+  template:
+    metadata:
+      labels:
+        app: securekube-db
+    spec:
+      containers:
+        - name: securekube-db
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: securekube-db-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: securekube-db-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc

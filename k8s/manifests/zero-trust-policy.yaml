@@ -26,3 +26,22 @@ spec:
         - operation:
             methods: ["GET"]
             paths: ["/transaction", "/health"]
+---
+# 3. Allow API to access the Database
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-api-to-db
+  namespace: securekube-app
+spec:
+  selector:
+    matchLabels:
+      app: securekube-db
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/securekube-app/sa/default"]
+      to:
+        - operation:
+            ports: ["5432"]
