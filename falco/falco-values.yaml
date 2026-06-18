@@ -1,0 +1,9 @@
+falcosidekick:
+  enabled: true
+  config:
+    kubernetes:
+      enabled: true
+      incluster: true
+    alert:
+      tags:
+        - "kill_pod"

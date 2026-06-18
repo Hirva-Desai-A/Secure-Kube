@@ -1,30 +1,14 @@
 customRules:
   securekube_rules.yaml: |-
-    - rule: Shell spawned in securekube container
-      desc: A shell was spawned inside a SecureKube application container
+    - rule: SecureKube Pod Breach
+      desc: Kill pod on shell spawn in securekube app
       condition: >
-        spawned_process and
-        container and
-        k8s.ns.name = "securekube-app" and
+        spawned_process and 
+        container and 
+        k8s.ns.name = "securekube-app" and 
+        container.name = "securekube-api" and 
         proc.name in (shell_binaries)
       output: >
-        SECUREKUBE ALERT - Shell in container
-        (user=%user.name user_loginuid=%user.loginuid
-        proc=%proc.name parent=%proc.pname
-        container=%container.name namespace=%k8s.ns.name)
+        SECUREKUBE ALERT - Shell spawned (user=%user.name proc=%proc.name) k8s_pod_name=%k8s.pod.name container=%container.name
       priority: CRITICAL
-      tags: [securekube, shell, container]
-
-    - rule: Sensitive file read in securekube namespace
-      desc: A sensitive file was read in a SecureKube container
-      condition: >
-        open_read and
-        container and
-        k8s.ns.name = "securekube-app" and
-        fd.name in (/etc/shadow, /etc/passwd, /root/.ssh/id_rsa)
-      output: >
-        SECUREKUBE ALERT - Sensitive file read
-        (user=%user.name file=%fd.name
-        container=%container.name namespace=%k8s.ns.name)
-      priority: WARNING
-      tags: [securekube, file, sensitive]
+      tags: [securekube, shell, kill_pod]

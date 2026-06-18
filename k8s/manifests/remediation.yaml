@@ -44,7 +44,7 @@ spec:
       serviceAccountName: remediation-sa
       containers:
         - name: remediation-engine
-          image: localhost:5001/securekube-remediation:v1
+          image: localhost:5000/securekube-remediation:v1
           ports:
             - containerPort: 8081
           resources:

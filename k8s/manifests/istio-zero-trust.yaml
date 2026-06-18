@@ -1,0 +1,50 @@
+# 1. Force Strict mTLS Encryption
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: strict-mtls
+  namespace: securekube-app
+spec:
+  mtls:
+    mode: STRICT
+---
+# 2. Default Deny - Lock all doors in the namespace
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: securekube-app
+spec:
+  {} # An empty spec means "Deny Everything"
+---
+# 3. Allow External/Ingress traffic to hit the API
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-api-ingress
+  namespace: securekube-app
+spec:
+  selector:
+    matchLabels:
+      app: securekube-api
+  action: ALLOW
+  rules:
+  - to:
+    - operation:
+        ports: ["8080"] # Replace with your API's actual port if different
+---
+# 4. Allow the API to talk to the Database
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-api-to-db
+  namespace: securekube-app
+spec:
+  selector:
+    matchLabels:
+      app: securekube-db
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/securekube-app/sa/default"]

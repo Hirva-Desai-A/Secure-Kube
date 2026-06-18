@@ -4,4 +4,5 @@
 .terraform.lock.hcl
 __pycache__/
 *.pyc
-.istio-1.20.0
+istio-1.20.0/
+.random.sh

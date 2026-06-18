@@ -4,7 +4,7 @@ metadata:
   name: securekube-api
   namespace: securekube-app
 spec:
-  replicas: 2
+  replicas: 1  # Crucial for local memory optimization
   selector:
     matchLabels:
       app: securekube-api
@@ -12,7 +12,12 @@ spec:
     metadata:
       labels:
         app: securekube-api
+      annotations:
+        # Micro-resource limits for the Istio sidecar proxy
+        sidecar.istio.io/proxyCPU: "10m"
+        sidecar.istio.io/proxyMemory: "32Mi"
     spec:
+      terminationGracePeriodSeconds: 2  # Forces immediate pod eviction to prevent deadlocks
       containers:
         - name: securekube-api
           image: localhost:5000/securekube-api:v3
@@ -27,14 +32,14 @@ spec:
                   key: DATABASE_URL
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: "32Mi"
+              cpu: "10m"
             limits:
-              memory: "256Mi"
-              cpu: "300m"
+              memory: "64Mi"
+              cpu: "50m"
           livenessProbe:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 30
+            initialDelaySeconds: 15
             periodSeconds: 10

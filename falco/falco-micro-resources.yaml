@@ -1,0 +1,15 @@
+falco:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+driver:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+falcosidekick:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi

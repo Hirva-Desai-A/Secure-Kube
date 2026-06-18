@@ -1,0 +1,15 @@
+customRules:
+  securekube_rules.yaml: |-
+    - rule: SecureKube Shell Spawned
+      desc: Catch shell in securekube app namespace
+      condition: spawned_process and container and k8s.ns.name = "securekube-app" and proc.name in (shell_binaries)
+      output: "SECUREKUBE ALERT - Shell spawned k8s_pod_name=%k8s.pod.name"
+      priority: CRITICAL
+      tags: [securekube]
+
+falcosidekick:
+  enabled: true
+  config:
+    webhook:
+      address: "http://remediation-svc.securekube-security.svc.cluster.local/webhook/falco"
+      minimumpriority: "debug"

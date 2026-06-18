@@ -1,14 +1,15 @@
 from fastapi import FastAPI, HTTPException, Depends
-from sqlalchemy import create_engine, Column, Integer, String, Float, text
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from datetime import datetime
 import os
 import logging
-from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("securekube-api")
 
+# Database URL from environment variables
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -22,14 +23,9 @@ class Transaction(Base):
     currency = Column(String, default="INR")
     status = Column(String, default="pending")
 
-class TransactionCreate(BaseModel):
-    txn_id: str
-    amount: float
-    currency: str = "INR"
-    status: str = "pending"
-
 def init_db():
     Base.metadata.create_all(bind=engine)
+    logger.info("Database tables initialized")
 
 def get_db():
     db = SessionLocal()
@@ -46,16 +42,14 @@ def startup_event():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "database": "connected"}
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
 
 @app.get("/transaction")
 def get_transactions(db: Session = Depends(get_db)):
     return db.query(Transaction).all()
-
-@app.post("/transaction")
-def create_transaction(txn: TransactionCreate, db: Session = Depends(get_db)):
-    db_txn = Transaction(**txn.dict())
-    db.add(db_txn)
-    db.commit()
-    db.refresh(db_txn)
-    return db_txn
