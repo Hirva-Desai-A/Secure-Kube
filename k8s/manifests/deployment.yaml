@@ -20,7 +20,7 @@ spec:
       terminationGracePeriodSeconds: 2  # Forces immediate pod eviction to prevent deadlocks
       containers:
         - name: securekube-api
-          image: localhost:5000/securekube-api:v3
+          image: localhost:5000/securekube-api:v2
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

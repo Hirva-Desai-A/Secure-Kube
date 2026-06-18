@@ -1,0 +1,38 @@
+prometheus:
+  prometheusSpec:
+    retention: 1d
+    resources: {} # Removed memory restrictions
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+grafana:
+  adminPassword: "SecureKube2025"
+  resources: {} # Removed memory restrictions
+  grafana.ini:
+    server:
+      root_url: "http://localhost:3000"
+  persistence:
+    enabled: false # Bypasses the Pending PVC storage issue
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://kube-prometheus-stack-prometheus:9090
+          access: proxy
+          isDefault: true
+        - name: Loki
+          type: loki
+          url: http://loki:3100
+          access: proxy
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: false # Disabled to save RAM
+alertmanager:
+  enabled: false # Disabled to save RAM
+prometheusOperator:
+  enabled: true
+  resources: {}

@@ -1,0 +1,16 @@
+grafana:
+  # Disable memory-heavy helper sidecars (Drops pod from 3 containers to 1)
+  sidecar:
+    dashboards:
+      enabled: false
+    datasources:
+      enabled: false
+    notifiers:
+      enabled: false
+  # Tell Kubernetes to wait 2 full minutes before assuming Grafana is dead
+  livenessProbe:
+    initialDelaySeconds: 120
+    timeoutSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 120
+    timeoutSeconds: 10

@@ -1,0 +1,15 @@
+loki:
+  auth_enabled: false
+  storage:
+    type: filesystem
+  limits_config:
+    retention_period: 1d
+  resources: {}
+promtail:
+  enabled: true
+  config:
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+  resources: {}
+persistence:
+  enabled: false # Bypasses the Pending PVC storage issue

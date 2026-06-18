@@ -6,8 +6,6 @@ from datetime import datetime
 import os
 import logging
 
-from prometheus_client import Counter, Gauge
-from prometheus_fastapi_instrumentator import Instrumentator
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("securekube-api")
 

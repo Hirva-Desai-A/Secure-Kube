@@ -1,0 +1,85 @@
+# Monitor hydrasec-api
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: securekube-api-monitor
+  namespace: securekube-monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - securekube-app
+  selector:
+    matchLabels:
+      app: securekube-api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+
+---
+# Monitor payment-svc
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: securekube-payment-monitor
+  namespace: securekube-monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - securekube-app
+  selector:
+    matchLabels:
+      app: securekube-payment
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+
+---
+# Monitor remediation engine
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: securekube-remediation-monitor
+  namespace: securekube-monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - securekube-security
+  selector:
+    matchLabels:
+      app: remediation-engine
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+
+---
+# Monitor Falco (if using Falco exporter)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: falco-exporter-monitor
+  namespace: securekube-monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - falco
+  selector:
+    matchLabels:
+      app: falco-exporter
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
