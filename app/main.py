@@ -55,3 +55,44 @@ def health():
 @app.get("/transaction")
 def get_transactions(db: Session = Depends(get_db)):
     return db.query(Transaction).all()
+
+
+from prometheus_client import Counter
+from prometheus_fastapi_instrumentator import Instrumentator
+
+app = FastAPI(title="SecureKube API")
+
+# 1. Define the custom metric for the Data Persistence dashboard panel
+TRANSACTION_COUNTER = Counter(
+    "securekube_transactions_total", 
+    "Total number of database transactions processed"
+)
+
+# 2. Bind the Instrumentator to the app to automatically track API HTTP Metrics
+instrumentator = Instrumentator().instrument(app)
+
+@app.on_event("startup")
+def startup_event():
+    init_db()
+    # 3. Expose the /metrics endpoint so Prometheus can scrape the app
+    instrumentator.expose(app)
+
+@app.get("/health")
+def health():
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
+@app.get("/transaction")
+def get_transactions(db: Session = Depends(get_db)):
+    return db.query(Transaction).all()
+
+@app.post("/transaction")
+def create_mock_transaction(amount: float = 100.0, db: Session = Depends(get_db)):
+    # 4. Increment the metric whenever data is persisted!
+    TRANSACTION_COUNTER.inc()
+    return {"status": "success", "amount": amount}

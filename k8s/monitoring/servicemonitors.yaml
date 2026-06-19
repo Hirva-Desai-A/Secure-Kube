@@ -83,3 +83,46 @@ spec:
     - port: metrics
       path: /metrics
       interval: 15s
+---
+# Monitor Falcosidekick for Threat Detection metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: falcosidekick-monitor
+  namespace: securekube-monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - falco
+  selector:
+    matchLabels:
+      # Ensure this matches your Falcosidekick deployment's specific labels
+      app.kubernetes.io/name: falcosidekick 
+  endpoints:
+    - port: http # Falcosidekick natively serves metrics on port 2801
+      path: /metrics
+      interval: 15s
+
+---
+# Monitor Istio Sidecar Proxies (Envoy) for Zero Trust Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istio-envoy-monitor
+  namespace: securekube-monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - securekube-app
+  selector:
+    matchExpressions:
+      - key: security.istio.io/tlsMode
+        operator: Exists
+  podMetricsEndpoints:
+    - path: /stats/prometheus
+      targetPort: 15020
+      interval: 15s
