@@ -1,0 +1,21 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: securekube-api-pdb
+  namespace: securekube-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: securekube-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-svc-pdb
+  namespace: securekube-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: payment-svc

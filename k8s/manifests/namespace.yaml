@@ -4,3 +4,12 @@ metadata:
   name: securekube-app
   labels:
     name: securekube-app
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: securekube-security
+  labels:
+    name: securekube-security
+    istio-injection: enabled

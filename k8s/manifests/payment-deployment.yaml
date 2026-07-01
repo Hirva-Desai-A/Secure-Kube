@@ -5,6 +5,9 @@ metadata:
   namespace: securekube-app
 spec:
   replicas: 1
+  revisionHistoryLimit: 0
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: payment-svc
@@ -12,20 +15,39 @@ spec:
     metadata:
       labels:
         app: payment-svc
+      annotations:
+        sidecar.istio.io/inject: "false"
     spec:
       containers:
         - name: payment-svc
-          image: localhost:5000/payment-svc:v1
+          image: securekube-app2:latest
           imagePullPolicy: IfNotPresent
+          # ... keep your ports and resources the same
           ports:
             - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
           resources:
             requests:
-              memory: "64Mi"
-              cpu: "100m"
+              memory: "24Mi"
+              cpu: "25m"
             limits:
-              memory: "128Mi"
-              cpu: "200m"
+              memory: "48Mi"
+              cpu: "50m"
 ---
 apiVersion: v1
 kind: Service

@@ -7,6 +7,8 @@ metadata:
     app: securekube-db
 spec:
   replicas: 1
+  strategy:
+    type: Recreate 
   selector:
     matchLabels:
       app: securekube-db
@@ -15,12 +17,31 @@ spec:
       labels:
         app: securekube-db
     spec:
+      initContainers:
+        - name: chmod-mount
+          image: busybox:latest
+          # 2. Change 999:999 to 70:70 for the Alpine image
+          command: ["sh", "-c", "chown -R 70:70 /var/lib/postgresql/data && chmod -R 700 /var/lib/postgresql/data"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: securekube-db-storage
+              mountPath: /var/lib/postgresql/data
       containers:
         - name: securekube-db
           image: postgres:15-alpine
           ports:
             - containerPort: 5432
+          # Add this resources block
+          resources:
+            requests:
+              memory: "64Mi" # Lowered from 256Mi
+              cpu: "50m"     # Lowered from 100m
+            limits:
+              memory: "512Mi" 
+              cpu: "500m"
           env:
+            # ... (your existing env vars)
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:

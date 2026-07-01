@@ -1,0 +1,29 @@
+name: OIDC Token Check (GitHub-only, no AWS)
+
+on:
+  workflow_dispatch:   # manual trigger only — won't run on every push
+
+permissions:
+  id-token: write   # required to request the OIDC token
+  contents: read
+
+jobs:
+  verify-oidc-token:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request OIDC token and inspect claims
+        run: |
+          echo "Requesting OIDC token from GitHub..."
+          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
+
+          echo "Token acquired (truncated for safety):"
+          echo "${TOKEN:0:20}...${TOKEN: -20}"
+
+          echo ""
+          echo "Decoded claims (payload only, not verifying signature):"
+          echo "$TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq . || echo "$TOKEN" | cut -d. -f2 | base64 --decode 2>/dev/null
+
+        env:
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}

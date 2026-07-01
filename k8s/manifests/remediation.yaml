@@ -44,17 +44,33 @@ spec:
       serviceAccountName: remediation-sa
       containers:
         - name: remediation-engine
-          image: localhost:5000/securekube-remediation:v1
+          image: securekube-remediation:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
           resources:
             requests:
               cpu: "10m"
-              memory: "64Mi"
+              memory: "32Mi"
             limits:
-              cpu: "100m"
-              memory: "128Mi"
----
+              cpu: "50m"
+              memory: "64Mi"
 apiVersion: v1
 kind: Service
 metadata:
@@ -64,5 +80,5 @@ spec:
   selector:
     app: remediation-engine
   ports:
-    - port: 80
-      targetPort: 8081
+    - port: 8081      # Change this to 8081
+      targetPort: 8081 # Keep this at 8081

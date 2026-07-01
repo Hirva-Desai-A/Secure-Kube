@@ -1,21 +1,23 @@
-from fastapi import FastAPI, HTTPException, Depends
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-from datetime import datetime
-import os
 import logging
+import os
+import time
 
-from prometheus_client import Counter, Gauge
+from fastapi import Depends, FastAPI
+from prometheus_client import Counter
 from prometheus_fastapi_instrumentator import Instrumentator
+from sqlalchemy import Column, Float, Integer, String, create_engine, text
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session, sessionmaker
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("securekube-api")
 
-# Database URL from environment variables
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./securekube.db")
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -25,9 +27,28 @@ class Transaction(Base):
     currency = Column(String, default="INR")
     status = Column(String, default="pending")
 
-def init_db():
+
+def wait_for_db(max_attempts: int = 30, delay_seconds: int = 2) -> None:
+    last_error = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+            logger.info("Database connection is ready")
+            return
+        except OperationalError as exc:
+            last_error = exc
+            logger.warning("Database not ready yet (%s/%s): %s", attempt, max_attempts, exc)
+            if attempt < max_attempts:
+                time.sleep(delay_seconds)
+    raise RuntimeError(f"Database did not become ready: {last_error}")
+
+
+def init_db() -> None:
+    wait_for_db()
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables initialized")
+
 
 def get_db():
     db = SessionLocal()
@@ -36,63 +57,37 @@ def get_db():
     finally:
         db.close()
 
-app = FastAPI(title="SecureKube API")
-
-@app.on_event("startup")
-def startup_event():
-    init_db()
-
-@app.get("/health")
-def health():
-    try:
-        db = SessionLocal()
-        db.execute(text("SELECT 1"))
-        db.close()
-        return {"status": "healthy", "database": "connected"}
-    except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
-
-@app.get("/transaction")
-def get_transactions(db: Session = Depends(get_db)):
-    return db.query(Transaction).all()
-
-
-from prometheus_client import Counter
-from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="SecureKube API")
-
-# 1. Define the custom metric for the Data Persistence dashboard panel
 TRANSACTION_COUNTER = Counter(
-    "securekube_transactions_total", 
-    "Total number of database transactions processed"
+    "securekube_transactions_total",
+    "Total number of database transactions processed",
 )
-
-# 2. Bind the Instrumentator to the app to automatically track API HTTP Metrics
 instrumentator = Instrumentator().instrument(app)
 
+
 @app.on_event("startup")
-def startup_event():
+def startup_event() -> None:
     init_db()
-    # 3. Expose the /metrics endpoint so Prometheus can scrape the app
     instrumentator.expose(app)
+
 
 @app.get("/health")
 def health():
     try:
-        db = SessionLocal()
-        db.execute(text("SELECT 1"))
-        db.close()
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
         return {"status": "healthy", "database": "connected"}
-    except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
+    except Exception as exc:
+        return {"status": "unhealthy", "error": str(exc)}
+
 
 @app.get("/transaction")
 def get_transactions(db: Session = Depends(get_db)):
     return db.query(Transaction).all()
+
 
 @app.post("/transaction")
 def create_mock_transaction(amount: float = 100.0, db: Session = Depends(get_db)):
-    # 4. Increment the metric whenever data is persisted!
     TRANSACTION_COUNTER.inc()
     return {"status": "success", "amount": amount}

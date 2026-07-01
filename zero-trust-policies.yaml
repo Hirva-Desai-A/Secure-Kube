@@ -1,4 +1,3 @@
-# 1. Deny all traffic by default
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
 metadata:
@@ -7,7 +6,6 @@ metadata:
 spec:
   {}
 ---
-# 2. Allow payment-svc to call securekube-api only
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
 metadata:
@@ -27,7 +25,6 @@ spec:
             methods: ["GET"]
             paths: ["/transaction", "/health"]
 ---
-# 3. Allow API to access the Database
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
 metadata:

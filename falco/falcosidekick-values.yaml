@@ -2,5 +2,5 @@ falcosidekick:
   enabled: true
   config:
     webhook:
-      address: "http://remediation-svc.securekube-security.svc.cluster.local/webhook/falco"
-      minimumpriority: "notice"
+      address: "http://remediation-svc.securekube-security.svc.cluster.local:8081/webhook/falco"
+      method: "POST"
