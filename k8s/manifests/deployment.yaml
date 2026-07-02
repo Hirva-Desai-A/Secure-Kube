@@ -28,11 +28,12 @@ spec:
       terminationGracePeriodSeconds: 2  # Forces immediate pod eviction to prevent deadlocks
       containers:
         - name: securekube-api
-          # CHANGE THIS LINE to use the version you just built
-          image: securekube-app:v1.1 
-          # Keeping IfNotPresent is fine since the image is now on your local host
-          imagePullPolicy: IfNotPresent
-          # ... keep your ports and env vars the same
+          # CRITICAL: Point this to your AWS Cloud Vault
+          # UPDATE THIS LINE WITH YOUR 12-DIGIT ACCOUNT ID
+          image: 622623003335.dkr.ecr.ap-southeast-1.amazonaws.com/securekube-api:v1.1 
+          
+          # Change to Always so Kubernetes is forced to pull from AWS instead of using your local cache
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:
@@ -43,11 +44,11 @@ spec:
                   key: DATABASE_URL
           resources:
             requests:
-              memory: "32Mi"  # Increased from 32Mi
+              memory: "32Mi"  
               cpu: "25m"
             limits:
-              memory: "128Mi" # Increased from 64Mi
-              cpu: "100m"     # Increased slightly to help with startup
+              memory: "128Mi" 
+              cpu: "100m"     
           readinessProbe:
             httpGet:
               path: /health
