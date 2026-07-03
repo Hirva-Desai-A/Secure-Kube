@@ -71,7 +71,7 @@ jobs:
           # UPDATE THIS LINE WITH YOUR 12-DIGIT ACCOUNT ID
           role-to-assume: arn:aws:iam::622623003335:role/securekube-github-actions-role 
           # Update to the region you used in aws configure
-          aws-region: ap-southeast-1 
+          aws-region: ap-south-1
 
       # --- 4. THE VAULT PUSH ---
       - name: Login to Amazon ECR

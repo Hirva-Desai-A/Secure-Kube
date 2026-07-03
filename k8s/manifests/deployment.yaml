@@ -30,7 +30,7 @@ spec:
         - name: securekube-api
           # CRITICAL: Point this to your AWS Cloud Vault
           # UPDATE THIS LINE WITH YOUR 12-DIGIT ACCOUNT ID
-          image: 622623003335.dkr.ecr.ap-southeast-1.amazonaws.com/securekube-api:v1.1 
+          image: 622623003335.dkr.ecr.us-east-1.amazonaws.com/securekube-api:v1.1 
           
           # Change to Always so Kubernetes is forced to pull from AWS instead of using your local cache
           imagePullPolicy: Always
