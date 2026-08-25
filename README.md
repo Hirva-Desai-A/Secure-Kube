@@ -1,0 +1,21 @@
+# SecureKube
+
+**A Hybrid Cloud-Native DevSecOps Platform with Zero Trust Networking, Runtime Threat Detection, and Autonomous Self-Healing**
+
+SecureKube is a Kubernetes-based security platform that demonstrates how a modern application is built, scanned, deployed, secured, monitored, and automatically defended across its entire lifecycle — from a developer's code commit to a running, continuously verified container — without treating security as something bolted on after the fact.
+
+Rather than showcasing individual security tools in isolation, SecureKube integrates five distinct disciplines into a single, coherent pipeline where each layer's output becomes the next layer's precondition: automated shift-left CI/CD scanning, credential-less cloud identity federation, Kubernetes-native compute, Zero Trust service mesh networking, and eBPF-based runtime threat detection paired with fully autonomous remediation. The result is a system where removing any one component measurably weakens the guarantees of the whole, rather than simply removing one convenience feature.
+
+## How It Works
+
+Every code change starts the same way: a developer pushes to GitHub, which triggers a CI/CD pipeline enforcing two independent, fail-closed security gates — Gitleaks scans for leaked secrets, and Trivy scans for known vulnerabilities — with either failure halting the pipeline before any image is built. Once both pass, the pipeline authenticates to AWS not with a stored access key but with a short-lived identity token obtained through GitHub's own OIDC provider, exchanged for temporary, narrowly-scoped AWS credentials that exist for roughly an hour and can do exactly three things: push to one ECR repository, and read/write one S3 bucket and one DynamoDB table used for Terraform's remote state.
+
+The application itself runs as three pods inside a local Kubernetes cluster: a payment service and a PostgreSQL database, both built and run locally, and the primary `securekube-api` service, whose image is the one artifact sourced through the full cloud pipeline via Amazon ECR — a deliberate hybrid model rather than an all-local or all-cloud extreme. Every pod has an Istio sidecar transparently injected into it, enforcing mutual TLS in strict mode and a default-deny network policy, so that no service can reach another unless an explicit, auditable rule permits it — the practical, enforced meaning of Zero Trust in this platform.
+
+Beneath that network layer, Falco continuously observes every kernel system call made by every container using an eBPF probe, a vantage point low enough that a compromised process cannot hide its actions from it. When Falco detects behavior consistent with an active compromise — such as a shell being spawned inside a container — the alert is routed to a purpose-built remediation engine, which identifies and deletes the affected pod through the Kubernetes API. Kubernetes' own reconciliation then automatically schedules a clean replacement from the same trusted image, completing detection to recovery in under 30 seconds with zero human involvement, while the database's independent persistent storage ensures application data written before the incident remains completely untouched throughout.
+
+Every layer of this system is observable rather than assumed correct: Prometheus, Loki, and Grafana consolidate metrics, logs, and alerts from every component into a single real-time dashboard, so Zero Trust enforcement, threat detection, self-healing, and data integrity can all be watched happening live rather than taken on faith.
+
+## Why It's Built This Way
+
+The entire cloud-facing portion of SecureKube is engineered to operate at genuinely zero recurring cost — not by hoping usage stays low, but structurally: IAM permissions are scoped narrowly enough that the platform's cloud identity is physically incapable of provisioning any billable resource, and lifecycle policies on ECR and S3 prevent storage from ever silently growing over time. The Kubernetes compute plane itself runs entirely locally via Kind, meaning the only ongoing cloud footprint is identity, artifact storage, and infrastructure state — exactly the parts of a real platform that benefit from being cloud-native, without accepting the cost of a managed compute service that bills by the hour regardless of use.
